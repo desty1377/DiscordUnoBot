@@ -92,7 +92,7 @@ async def startgame(ctx, *, users):
 		first = random.choice(players)
 		for x in players:
 			hand = []
-			n = 2
+			n = 7
 			while n>0:
 				card = random.choice(deck)
 				hand.append(card)
