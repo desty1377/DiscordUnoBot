@@ -108,12 +108,17 @@ async def startgame(ctx, *, users):
 			else:
 				deck.remove(currentcard)
 				break
+		query = await bot.db.games.find_one({"_id": ctx.author.id})
+		if query["players"].index(first) + 1 == len(query["players"]):
+			nextplayer = 0
+		else:
+			nextplayer = query["players"].index(first) + 1
+		nextplayer = bot.get_user(query["players"][nextplayer])
 		for x in players:
 			cardpic = discord.File(f"assets/{currentcard}.png", filename="image.png")
-			embed = discord.Embed(color=decode([currentcard], color=True), title="Uno Game Info", description=f"{bot.get_user(first).name}'s turn")
+			embed = discord.Embed(color=decode([currentcard], color=True), title="Uno Game Info", description=f"{bot.get_user(first).name}'s turn\n{nextplayer.name}'s turn is next")
 			embed.set_thumbnail(url="attachment://image.png")
 			embed.add_field(name="Current Card", value=decode([currentcard]))
-			query = await bot.db.games.find_one({"_id": ctx.author.id})
 			embed.add_field(name="Your Hand", value=decode(query[str(x)]["hand"]))
 			embed.add_field(name=f"{bot.get_user(first).name}'s Hand", value=f"{len(query[str(x)]['hand'])} cards", inline=True)
 			embed.add_field(name="Rotation of play", value="Forward", inline=True)
@@ -142,7 +147,7 @@ async def turn(id, player):
 		data = await bot.db.games.find_one({"_id": id})
 		player = bot.get_user(player)
 		notif = await player.send("It is your turn! To play a card enter the number to the left of the card. To draw a card type 'draw', if you only have 2 cards left and you play one remember to type 'uno'")
-		action = await bot.wait_for("message", check=lambda m: m.author.id == player.id)
+		action = await bot.wait_for("message", check=lambda m: m.author.id == player.id and m.channel == player.dm_channel)
 		if action.content.isdigit():
 			card = data[str(player.id)]["hand"][int(action.content) - 1]
 			if card[0] == data["currentcard"][0].lower() or card[1:] == data["currentcard"][1:]:
@@ -186,7 +191,7 @@ async def turn(id, player):
 					await update_embeds(id, player, move)
 			elif "wild" in card:
 				await player.send("You played a wild. Please type one of the four colors to change to.")
-				choice = await bot.wait_for("message", check=lambda m: m.author.id == player.id and m.content.lower() in ["blue", "red", "green", "yellow"])
+				choice = await bot.wait_for("message", check=lambda m: m.author.id == player.id and m.content.lower() in ["blue", "red", "green", "yellow"] and m.channel == player.dm_channel)
 				if "wild+4" in card:
 					colors = {"blue": "Blue Wild +4", "red": "Red Wild +4", "yellow": "Yellow Wild +4", "green": "Green Wild +4"}
 				else:
@@ -273,8 +278,10 @@ async def update_embeds(id, play, action, next=True, skip=False):
 						currentplayer = data["players"].index(play.id) + 1
 				else:
 					if len(data["players"]) > 2:
-						if data["players"].index(play.id) + 2 >= len(data["players"]):
+						if data["players"].index(play.id) + 2 > len(data["players"]):
 								currentplayer = 1
+						elif data["players"].index(play.id) + 2 == len(data["players"]):
+								currentplayer = 0
 						else:
 							currentplayer = data["players"].index(play.id) + 2
 					else:
@@ -306,7 +313,7 @@ async def update_embeds(id, play, action, next=True, skip=False):
 			embed.set_thumbnail(url="attachment://image.png")
 			embed.add_field(name="Current Card", value=currentcard)
 			embed.add_field(name="Your Hand", value=decode(data[str(player.id)]["hand"]))
-			embed.add_field(name=f"{bot.get_user(int(data['turn'])).name}'s Hand", value=f"{len(data[str(currentplayer.id)]['hand'])} cards", inline=True)
+			embed.add_field(name=f"{currentplayer.name}'s Hand", value=f"{len(data[str(currentplayer.id)]['hand'])} cards", inline=True)
 			embed.add_field(name="Rotation of play", value=data["rotation"], inline=True)
 			msg = await player.fetch_message(int(data[str(player.id)]["msg"]))
 			await msg.delete()
