@@ -145,6 +145,10 @@ async def startgame(ctx, *, users):
 async def turn(id, player):
 	try:
 		data = await bot.db.games.find_one({"_id": id})
+		if not data:
+			return
+		else:
+			pass
 		player = bot.get_user(player)
 		notif = await player.send("It is your turn! To play a card enter the number to the left of the card. To draw a card type 'draw', if you only have 2 cards left and you play one remember to type 'uno'")
 		action = await bot.wait_for("message", check=lambda m: m.author.id == player.id and m.channel == player.dm_channel)
@@ -329,6 +333,7 @@ async def deletegame(ctx):
 	data = await bot.db.games.find_one({"_id": ctx.author.id})
 	try:
 		for player in data["players"]:
+			await bot.get_user(player).send(f"{ctx.author.name} deleted the game you're currently in. You can now participate in a new game.")
 			if player in bot.players:
 				bot.players.remove(player)
 	except KeyError:
