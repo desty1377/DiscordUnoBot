@@ -203,7 +203,7 @@ async def turn(id, player):
 				hand = data[str(player.id)]["hand"]
 				hand.remove(card)
 				await bot.db.games.update_one({"_id": id}, {"$set": {f"{str(player.id)}.hand": hand}})
-				await bot.db.games.update_one({"_id": id}, {"$set": {"currentcard": colors[choice.content]}})
+				await bot.db.games.update_one({"_id": id}, {"$set": {"currentcard": colors[choice.content.lower()]}})
 				if card == "wild+4":
 					if data["players"].index(player.id) + 1 == len(data["players"]):
 						victim = 0
@@ -212,10 +212,10 @@ async def turn(id, player):
 					victim = data["players"][victim]
 					await draw(id, victim, 4)
 					await asyncio.gather(uno_check(id, player))
-					await update_embeds(id, player, f"{player.name} used a wild +4 on {bot.get_user(victim).name} and changed the color to {choice.content}", skip=True)
+					await update_embeds(id, player, f"{player.name} used a wild +4 on {bot.get_user(victim).name} and changed the color to {choice.content.lower()}", skip=True)
 				else:
 					await asyncio.gather(uno_check(id, player))
-					await update_embeds(id, player, f"{player.name} used a wild and changed the color to {choice.content}")
+					await update_embeds(id, player, f"{player.name} used a wild and changed the color to {choice.content.lower()}")
 			else:
 				await player.send("The card you play must match the current card in either color or numeric value. Please try again.")
 				await notif.delete()
