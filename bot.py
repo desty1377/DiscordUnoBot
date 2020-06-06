@@ -394,8 +394,8 @@ async def kill(ctx):
 @bot.command(aliases=["stats"])
 async def info(ctx):
 	"Get info about the bot"
-        process = psutil.Process(os.getpid())
-        memory = f"{process.memory_info()[0] / 1024 / 1024:.2f} MB"
+		process = psutil.Process(os.getpid())
+		memory = f"{process.memory_info()[0] / 1024 / 1024:.2f} MB"
 	RAM = psutil.virtual_memory()
 	used = RAM.used >> 20
 	percent = RAM.percent
@@ -406,7 +406,7 @@ async def info(ctx):
 	embed.add_field(name="Servers", value=len(bot.guilds), inline=False)
 	embed.add_field(name="Active games", value=await bot.db.games.count_documents({}))
 	embed.add_field(name='OS', value=platform.system(), inline=False)
-        embed.add_field(name="Memory", value=f'**Process Memory:** {memory}\n**Total Memory:** {percent}% ({used}MB)', inline=False)
+		embed.add_field(name="Memory", value=f'**Process Memory:** {memory}\n**Total Memory:** {percent}% ({used}MB)', inline=False)
 	embed.add_field(name="CPU", value=f"{CPU}%")
 	embed.add_field(name='GitHub', value='[GitHub Repo](https://github.com/shadeyg56/DiscordUnoBot)', inline=False)
 	embed.set_footer(text=f'Powered by discord.py v{discord.__version__}')
