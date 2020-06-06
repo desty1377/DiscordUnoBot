@@ -6,6 +6,8 @@ import random
 import asyncio
 import time
 import private
+import psutil
+import platform
 
 bot = commands.Bot(command_prefix="u.", activity=discord.Game(name="Uno | u.help"))
 mongo = AsyncIOMotorClient(private.mongo, retryWrites=False)
@@ -128,8 +130,8 @@ async def startgame(ctx, *, users):
 			embed.set_thumbnail(url="attachment://image.png")
 			embed.add_field(name="Current Card", value=decode([currentcard]))
 			embed.add_field(name="Your Hand", value=decode(query[str(x)]["hand"]))
-			embed.add_field(name=f"{bot.get_user(first).name}'s Hand", value=f"{len(query[str(x)]['hand'])} cards", inline=True)
-			embed.add_field(name="Rotation of play", value="Forward", inline=True)
+			embed.add_field(name=f"{bot.get_user(first).name}'s Hand", value=f"{len(query[str(x)]['hand'])} cards", inline=False)
+			embed.add_field(name="Rotation of play", value="Forward")
 			msg = await bot.get_user(x).send(file=cardpic, embed=embed)
 			await bot.db.games.update_one({"_id": ctx.author.id}, {"$set": {"turn": str(first)}})
 			await bot.db.games.update_one({"_id": ctx.author.id}, {"$set": {f"{str(x)}.msg": msg.id}})
@@ -338,8 +340,8 @@ async def update_embeds(id, play, action, next=True, skip=False):
 			embed.set_thumbnail(url="attachment://image.png")
 			embed.add_field(name="Current Card", value=currentcard)
 			embed.add_field(name="Your Hand", value=decode(data[str(player.id)]["hand"]))
-			embed.add_field(name=f"{currentplayer.name}'s Hand", value=f"{len(data[str(currentplayer.id)]['hand'])} cards", inline=True)
-			embed.add_field(name="Rotation of play", value=data["rotation"], inline=True)
+			embed.add_field(name=f"{currentplayer.name}'s Hand", value=f"{len(data[str(currentplayer.id)]['hand'])} cards", inline=False)
+			embed.add_field(name="Rotation of play", value=data["rotation"])
 			msg = await player.fetch_message(int(data[str(player.id)]["msg"]))
 			await msg.delete()
 			await asyncio.sleep(1.5)
@@ -388,4 +390,26 @@ async def kill(ctx):
 	print("Bot was killed.")
 	await bot.close()
 
+@bot.command()
+async def info(ctx):
+	"Get info about the bot"
+	RAM = psutil.virtual_memory()
+	used = RAM.used >> 20
+	percent = RAM.percent
+	CPU  = psutil.cpu_percent()
+	embed = discord.Embed(title="Uno Bot Info", color=discord.Color.red(), timestamp=ctx.message.created_at)
+	embed.set_thumbnail(url=bot.user.avatar_url)
+	embed.add_field(name="Author", value="-= shadeyg56 =-#8670", inline=False)
+	embed.add_field(name="Servers", value=len(bot.guilds), inline=False)
+	embed.add_field(name="Active games", value=await bot.db.games.count_documents({}))
+	embed.add_field(name='OS', value=platform.system(), inline=False)
+	embed.add_field(name="Memory", value=f'{percent}% ({used}MB)', inline=False)
+	embed.add_field(name="CPU", value=f"{CPU}%")
+	embed.add_field(name='GitHub', value='[GitHub Repo](https://github.com/shadeyg56/DiscordUnoBot)', inline=False)
+	embed.set_footer(text=f'Powered by discord.py v{discord.__version__}')
+	await ctx.send(embed=embed)
+
+
+
+bot.load_extension("eval")
 bot.run(private.token)
