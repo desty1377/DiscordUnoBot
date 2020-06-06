@@ -409,6 +409,13 @@ async def info(ctx):
 	embed.set_footer(text=f'Powered by discord.py v{discord.__version__}')
 	await ctx.send(embed=embed)
 
+@bot.command()
+async def invite(ctx):
+	"Invite the bot to your server"
+	await ctx.send("https://discord.com/api/oauth2/authorize?client_id=714954865947705426&permissions=2048&scope=bot")
+
+
+
 
 
 bot.load_extension("eval")
