@@ -7,7 +7,7 @@ import asyncio
 import time
 import private
 
-bot = commands.Bot(command_prefix="u.")
+bot = commands.Bot(command_prefix="u.", activity=discord.Game(name="Uno | u.help"))
 mongo = AsyncIOMotorClient(private.mongo, retryWrites=False)
 bot.db = mongo.unobot
 
@@ -16,6 +16,13 @@ async def on_ready():
 	print("Bot is ready")
 	bot.players = []
 
+@bot.event
+async def on_command_error(ctx, error):
+	if isinstance(error, commands.errors.MissingRequiredArgument):
+		if ctx.command.name == "startgame":
+			await ctx.send("To use u.startgame, run u.startgame then mention all the players excluding yourself, but you will still be included in the game. For example: u.startgame @user2 @user3")
+	else:
+		print(f"Error occured: {error}")
 
 @bot.command()
 async def ping(ctx):
@@ -67,6 +74,7 @@ def decode(hand, color=False):
 
 @bot.command(aliases=["start", "s"])
 async def startgame(ctx, *, users):
+	"Start a game of Uno by mentioning all the players but yourself"
 	try:
 		userslist = users.split()
 		userslist.insert(0, ctx.author.mention)
@@ -149,9 +157,22 @@ async def turn(id, player):
 			return
 		else:
 			pass
+		await bot.db.games.update_one({"_id": id}, {"$set": {"turn": str(player)}})
 		player = bot.get_user(player)
 		notif = await player.send("It is your turn! To play a card enter the number to the left of the card. To draw a card type 'draw', if you only have 2 cards left and you play one remember to type 'uno'")
-		action = await bot.wait_for("message", check=lambda m: m.author.id == player.id and m.channel == player.dm_channel)
+		await bot.db.games.update_one({"_id": id}, {"$set": {"time": time.time()}})
+		try:
+			action = await bot.wait_for("message", check=lambda m: m.author.id == player.id and m.channel == player.dm_channel, timeout=60)
+		except asyncio.TimeoutError:
+			if player.id != id:
+				await player.send("You are taking a long time to make a move. In 30 seconds the host will have the option to skip you.")
+			else:
+				action = await bot.wait_for("message", check=lambda m: m.author.id == player.id and m.channel == player.dm_channel)
+			try:
+				action = await bot.wait_for("message", check=lambda m: m.author.id == player.id and m.channel == player.dm_channel, timeout=30)
+			except asyncio.TimeoutError:
+				await bot.get_user(id).send(f"{player.name} is taking a long time to go. You can skip them with u.skip.")
+				action = await bot.wait_for("message", check=lambda m: m.author.id == player.id and m.channel == player.dm_channel)
 		if action.content.isdigit():
 			card = data[str(player.id)]["hand"][int(action.content) - 1]
 			if card[0] == data["currentcard"][0].lower() or card[1:] == data["currentcard"][1:]:
@@ -327,9 +348,27 @@ async def update_embeds(id, play, action, next=True, skip=False):
 		if next==True:
 			await turn(id, currentplayer.id)
 
+@bot.command()
+async def skip(ctx):
+	"Skip the current player's turn if they take too long"
+	data = await bot.db.games.find_one({"_id": ctx.author.id})
+	if data:
+		timer = time.time() - data["time"]
+		if timer >= 90:
+			player = bot.get_user(int(data["turn"]))
+			if len(data["players"]) > 2:
+				await update_embeds(ctx.author.id, player, f"The host skipped {player.name} for taking too long", skip=True)
+			else:
+				await update_embeds(ctx.author.id, ctx.author, f"The host skipped {player.name} for taking too long", skip=True)
+		else:
+			await ctx.send(f"You must wait {round(90 - timer)} more seconds until you can skip the current player")
+	else:
+		await ctx.send("You must be the host of a game to skip the current player.")
+
 
 @bot.command()
 async def deletegame(ctx):
+	"Delete your current Uno game"
 	data = await bot.db.games.find_one({"_id": ctx.author.id})
 	try:
 		for player in data["players"]:
