@@ -394,8 +394,8 @@ async def kill(ctx):
 @bot.command(aliases=["stats"])
 async def info(ctx):
 	"Get info about the bot"
-		process = psutil.Process(os.getpid())
-		memory = f"{process.memory_info()[0] / 1024 / 1024:.2f} MB"
+	process = psutil.Process(os.getpid())
+	memory = f"{process.memory_info()[0] / 1024 / 1024:.2f} MB"
 	RAM = psutil.virtual_memory()
 	used = RAM.used >> 20
 	percent = RAM.percent
