@@ -298,28 +298,41 @@ async def update_embeds(id, play, action, next=True, skip=False):
     if len(data[str(play.id)]["hand"]) == 0:
         for player in data["players"]:
             await bot.get_user(player).send(f"{play.name} played their last card and won the game! Game over... deleting your game now")
-            for player in data["players"]:
-                if player in bot.players:
-                    bot.players.remove(player)
-            await bot.db.games.delete_one({"_id": id})
+            if player in bot.players:
+                bot.players.remove(player)
+        await bot.db.games.delete_one({"_id": id})
     else:
         for player in data["players"]:
             player = bot.get_user(int(player))
             await player.trigger_typing()
             if next:
                 if not skip:
-                    if data["players"].index(play.id) + 1 == len(data["players"]):
-                        currentplayer = 0
-                    else:
-                        currentplayer = data["players"].index(play.id) + 1
-                else:
-                    if len(data["players"]) > 2:
-                        if data["players"].index(play.id) + 2 > len(data["players"]):
-                            currentplayer = 1
-                        elif data["players"].index(play.id) + 2 == len(data["players"]):
+                    if data["rotation"] == "forward":
+                        if data["players"].index(play.id) + 1 == len(data["players"]):
                             currentplayer = 0
                         else:
-                            currentplayer = data["players"].index(play.id) + 2
+                            currentplayer = data["players"].index(play.id) + 1
+                    else:
+                        if data["players"].index(play.id) - 1 == -1:
+                            currentplayer = len(data["players"]) - 1
+                        else:
+                            currentplayer = data["players"].index(play.id) - 1
+                else:
+                    if len(data["players"]) > 2:
+                        if data["rotation"] == "forward":
+                            if data["players"].index(play.id) + 2 > len(data["players"]):
+                                currentplayer = 1
+                            elif data["players"].index(play.id) + 2 == len(data["players"]):
+                                currentplayer = 0
+                            else:
+                                currentplayer = data["players"].index(play.id) + 2
+                        else:
+                            if data["players"].index(play.id) - 2 == -1:
+                                currentplayer = len(data["players"]) - 1
+                            elif data["players"].index(play.id) - 2 == -2:
+                                currentplayer = len(data["players"]) - 2
+                            else:
+                                currentplayer = data["players"].index(play.id) - 2
                     else:
                         currentplayer = data["players"].index(play.id)
             else:
@@ -336,9 +349,9 @@ async def update_embeds(id, play, action, next=True, skip=False):
                     nextplayer = currentplayer - 1
             if "Wild" in data["currentcard"]:
                 if "Wild +4" in data["currentcard"]:
-                    cardpic = discord.File(f"assets/wild+4.png", filename="image.png")
+                    cardpic = discord.File("assets/wild+4.png", filename="image.png")
                 else:
-                    cardpic = discord.File(f"assets/wild.png", filename="image.png")
+                    cardpic = discord.File("assets/wild.png", filename="image.png")
                 currentcard = data["currentcard"]
             else:
                 cardpic = discord.File(f"assets/{data['currentcard']}.png", filename="image.png")
